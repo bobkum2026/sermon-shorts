@@ -1,0 +1,10 @@
+services:
+  sermon-shorts:
+    build: .
+    ports:
+      - "10000:10000"
+    env_file:
+      - .env
+    volumes:
+      - ./output:/app/output
+    restart: unless-stopped

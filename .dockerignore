@@ -1,0 +1,11 @@
+output/
+temp/
+__pycache__/
+*.pyc
+.env
+.venv/
+.git/
+*.md
+ffmpeg/
+dist/
+build/

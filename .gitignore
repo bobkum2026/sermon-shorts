@@ -1,0 +1,11 @@
+output/
+temp/
+__pycache__/
+*.pyc
+.env
+*.egg-info/
+dist/
+build/
+.venv/
+assets/music/*.mp3
+assets/music/*.wav

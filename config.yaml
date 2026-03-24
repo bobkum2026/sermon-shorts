@@ -1,0 +1,51 @@
+general:
+  output_dir: "./output"
+  temp_dir: "./temp"
+  cleanup_temp: true
+  log_level: "INFO"
+
+download:
+  max_resolution: 1080
+  format: "mp4"
+
+transcription:
+  mode: "api"                   # "api" (OpenAI Whisper API) or "local"
+  model: "whisper-1"
+  language: "auto"              # "auto", "ko", "en", etc.
+
+selection:
+  model: "gpt-4o"
+  num_clips: 5
+  min_duration: 30
+  max_duration: 90
+  temperature: 0.7
+
+crop:
+  target_aspect: [9, 16]
+  output_resolution: [1080, 1920]
+  face_detection_interval: 0.5
+  smoothing_factor: 0.3
+
+subtitles:
+  style: "capcut"               # "capcut", "karaoke", "minimal"
+  font_size: 58
+  words_per_line: 4
+  highlight_color: "#FFD700"
+  text_color: "#FFFFFF"
+  outline_color: "#000000"
+  outline_width: 3
+  shadow_offset: 2
+  position_y: 75                # Percent from top
+
+compose:
+  add_hook: true
+  hook_duration: 2.5
+  hook_font_size: 72
+  add_music: false
+  music_volume_db: -18
+  fade_in: 0.5
+  fade_out: 1.0
+  video_codec: "libx264"
+  crf: 18
+  audio_codec: "aac"
+  fps: 30

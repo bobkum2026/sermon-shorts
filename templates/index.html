@@ -1,0 +1,462 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sermon Shorts Generator</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <header class="top-bar">
+        <h1>Sermon Shorts Generator</h1>
+    </header>
+
+    <div class="two-col">
+        <!-- ========== LEFT: Original Video + Controls ========== -->
+        <div class="col-left">
+            <div class="video-preview">
+                <div id="yt-placeholder" class="yt-placeholder">
+                    <span>YouTube URL을 입력하면<br>원본 영상이 여기에 표시됩니다</span>
+                </div>
+                <iframe id="yt-iframe" style="display:none" width="100%" height="100%"
+                    frameborder="0" allow="autoplay; encrypted-media" allowfullscreen></iframe>
+            </div>
+
+            <div class="controls">
+                <div class="form-group">
+                    <label>YouTube URL</label>
+                    <div class="url-row">
+                        <input type="url" id="url" placeholder="https://youtube.com/watch?v=...">
+                        <button class="btn-small" onclick="loadPreview()">Preview</button>
+                    </div>
+                </div>
+
+                <div class="form-row-3">
+                    <div class="form-group">
+                        <label>Clips</label>
+                        <input type="number" id="num_clips" value="3" min="1" max="20">
+                    </div>
+                    <div class="form-group">
+                        <label>Min (sec)</label>
+                        <input type="number" id="min_duration" value="30" min="10" max="120">
+                    </div>
+                    <div class="form-group">
+                        <label>Max (sec)</label>
+                        <input type="number" id="max_duration" value="60" min="15" max="180">
+                    </div>
+                </div>
+
+                <div class="form-row-3">
+                    <div class="form-group">
+                        <label>Subtitle</label>
+                        <select id="subtitle_style">
+                            <option value="capcut" selected>CapCut</option>
+                            <option value="karaoke">Karaoke</option>
+                            <option value="minimal">Minimal</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>AI Engine</label>
+                        <select id="ai_engine">
+                            <option value="openai" selected>GPT-4o</option>
+                            <option value="gemini">Gemini</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Language</label>
+                        <select id="language">
+                            <option value="auto" selected>Auto</option>
+                            <option value="ko">Korean</option>
+                            <option value="en">English</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="toggles">
+                    <label class="toggle"><input type="checkbox" id="add_hook" checked><span>Hook</span></label>
+                    <label class="toggle"><input type="checkbox" id="add_zoom_cuts" checked><span>Zoom</span></label>
+                    <label class="toggle"><input type="checkbox" id="add_emoji" checked><span>Emoji</span></label>
+                    <label class="toggle"><input type="checkbox" id="add_progress_bar" checked><span>Bar</span></label>
+                    <label class="toggle"><input type="checkbox" id="add_music"><span>BGM</span></label>
+                </div>
+
+                <button id="generate-btn" onclick="startGeneration()">Generate</button>
+            </div>
+        </div>
+
+        <!-- ========== RIGHT: Preview Editor + Output ========== -->
+        <div class="col-right">
+            <!-- Phone frame with live overlay editor -->
+            <div class="phone-frame" id="phone-frame">
+                <!-- Video output (hidden until generated) -->
+                <video id="output-video" style="display:none" controls playsinline></video>
+
+                <!-- Live preview overlay (visible during editing) -->
+                <div id="preview-overlay" class="preview-overlay">
+                    <!-- Video area placeholder -->
+                    <div class="preview-video-area">
+                        <span class="preview-hint">Video Area</span>
+                    </div>
+
+                    <!-- Gradient zone -->
+                    <div class="preview-gradient"></div>
+
+                    <!-- Black bar with draggable editable text -->
+                    <div class="preview-black-bar" id="black-bar">
+                        <div class="draggable-text" id="drag-title" style="top: 25%;">
+                            <div class="editable-title"
+                                 id="edit-title"
+                                 contenteditable="true"
+                                 data-placeholder="제목을 입력하세요"
+                                 oninput="updatePreview()"></div>
+                        </div>
+                        <div class="draggable-text" id="drag-sub" style="top: 65%;">
+                            <div class="editable-sub"
+                                 id="edit-scripture"
+                                 contenteditable="true"
+                                 data-placeholder="성경 구절"
+                                 oninput="updatePreview()"></div>
+                            <div class="editable-sub editable-speaker"
+                                 id="edit-speaker"
+                                 contenteditable="true"
+                                 data-placeholder="설교자 이름"
+                                 oninput="updatePreview()"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Text size & position controls -->
+            <div class="overlay-controls" id="overlay-controls">
+                <div class="control-section-label">크기</div>
+                <div class="slider-group">
+                    <label>제목</label>
+                    <input type="range" id="title_size" min="40" max="140" value="90" oninput="updateSizes()">
+                    <span id="title_size_val">90</span>
+                </div>
+                <div class="slider-group">
+                    <label>구절/이름</label>
+                    <input type="range" id="sub_size" min="24" max="80" value="44" oninput="updateSizes()">
+                    <span id="sub_size_val">44</span>
+                </div>
+                <div class="control-section-label">위치 (위 ← → 아래)</div>
+                <div class="slider-group">
+                    <label>제목</label>
+                    <input type="range" id="title_y" min="5" max="80" value="25" oninput="updatePositions()">
+                    <span id="title_y_val">25%</span>
+                </div>
+                <div class="slider-group">
+                    <label>구절/이름</label>
+                    <input type="range" id="sub_y" min="20" max="90" value="65" oninput="updatePositions()">
+                    <span id="sub_y_val">65%</span>
+                </div>
+                <div class="control-section-label">레이아웃</div>
+                <div class="slider-group">
+                    <label>검정 바</label>
+                    <input type="range" id="bar_ratio" min="20" max="60" value="40" oninput="updateBarRatio()">
+                    <span id="bar_ratio_val">40%</span>
+                </div>
+            </div>
+
+            <!-- Progress / Status -->
+            <div id="status-area" class="status-area">
+                <div id="progress-section" style="display:none;">
+                    <div class="progress-bar-container">
+                        <div id="progress-bar" class="progress-bar" style="width:0%"></div>
+                    </div>
+                    <p id="progress-message" class="progress-msg">Ready</p>
+                    <div class="stage-indicators">
+                        <span data-stage="downloading">Download</span>
+                        <span data-stage="transcribing">STT</span>
+                        <span data-stage="selecting">AI</span>
+                        <span data-stage="processing">Process</span>
+                        <span data-stage="done">Done</span>
+                    </div>
+                </div>
+
+                <div id="clip-selector" style="display:none;">
+                    <label>Clips</label>
+                    <div id="clip-buttons" class="clip-buttons"></div>
+                    <a id="download-link" class="download-btn" style="display:none" download>Download</a>
+                </div>
+
+                <div id="error-section" style="display:none;">
+                    <p id="error-message" class="error-msg"></p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentJobId = null;
+        let pollTimer = null;
+        let clipData = [];
+
+        // ── YouTube Preview ──
+        function loadPreview() {
+            const url = document.getElementById('url').value.trim();
+            if (!url) return;
+            const vid = extractVideoId(url);
+            if (vid) {
+                document.getElementById('yt-placeholder').style.display = 'none';
+                const iframe = document.getElementById('yt-iframe');
+                iframe.src = `https://www.youtube.com/embed/${vid}`;
+                iframe.style.display = 'block';
+            }
+        }
+        function extractVideoId(url) {
+            const m = url.match(/(?:v=|\/shorts\/|youtu\.be\/)([a-zA-Z0-9_-]{11})/);
+            return m ? m[1] : null;
+        }
+        document.getElementById('url').addEventListener('input', function() {
+            if (this.value.includes('youtube.com') || this.value.includes('youtu.be')) loadPreview();
+        });
+
+        // ── Live Preview: sizes ──
+        function updateSizes() {
+            const ts = document.getElementById('title_size').value;
+            const ss = document.getElementById('sub_size').value;
+            document.getElementById('title_size_val').textContent = ts;
+            document.getElementById('sub_size_val').textContent = ss;
+            // Scale for preview (phone frame is ~280px wide vs 1080px real)
+            const scale = 280 / 1080;
+            document.getElementById('edit-title').style.fontSize = (ts * scale) + 'px';
+            document.querySelectorAll('.editable-sub').forEach(el => {
+                el.style.fontSize = (ss * scale) + 'px';
+            });
+        }
+
+        function updatePositions() {
+            const ty = document.getElementById('title_y').value;
+            const sy = document.getElementById('sub_y').value;
+            document.getElementById('title_y_val').textContent = ty + '%';
+            document.getElementById('sub_y_val').textContent = sy + '%';
+            document.getElementById('drag-title').style.top = ty + '%';
+            document.getElementById('drag-sub').style.top = sy + '%';
+        }
+
+        function updateBarRatio() {
+            const ratio = document.getElementById('bar_ratio').value;
+            document.getElementById('bar_ratio_val').textContent = ratio + '%';
+            const videoRatio = 100 - parseInt(ratio);
+            const gradientStart = videoRatio - 20;
+            document.querySelector('.preview-video-area').style.height = gradientStart + '%';
+            document.querySelector('.preview-gradient').style.height = '20%';
+            document.querySelector('.preview-black-bar').style.height = ratio + '%';
+        }
+
+        function updatePreview() {
+            document.querySelectorAll('[contenteditable]').forEach(el => {
+                el.classList.toggle('empty', el.textContent.trim() === '');
+            });
+        }
+
+        // ── LocalStorage: save/restore all settings ──
+        const SAVE_KEY = 'sermon_shorts_settings';
+
+        const settingsMap = {
+            // input/select elements → value
+            'url': 'url',
+            'num_clips': 'num_clips',
+            'min_duration': 'min_duration',
+            'max_duration': 'max_duration',
+            'subtitle_style': 'subtitle_style',
+            'ai_engine': 'ai_engine',
+            'language': 'language',
+            'title_size': 'title_size',
+            'sub_size': 'sub_size',
+            'title_y': 'title_y',
+            'sub_y': 'sub_y',
+            'bar_ratio': 'bar_ratio',
+        };
+        const checkboxes = ['add_hook','add_zoom_cuts','add_emoji','add_progress_bar','add_music'];
+        const editables = {
+            'edit-title': 'title_text',
+            'edit-scripture': 'scripture_text',
+            'edit-speaker': 'speaker_text',
+        };
+
+        function saveSettings() {
+            const data = {};
+            for (const [id, key] of Object.entries(settingsMap)) {
+                const el = document.getElementById(id);
+                if (el) data[key] = el.value;
+            }
+            for (const id of checkboxes) {
+                const el = document.getElementById(id);
+                if (el) data[id] = el.checked;
+            }
+            for (const [id, key] of Object.entries(editables)) {
+                const el = document.getElementById(id);
+                if (el) data[key] = el.textContent;
+            }
+            localStorage.setItem(SAVE_KEY, JSON.stringify(data));
+        }
+
+        function loadSettings() {
+            const raw = localStorage.getItem(SAVE_KEY);
+            if (!raw) return;
+            try {
+                const data = JSON.parse(raw);
+                for (const [id, key] of Object.entries(settingsMap)) {
+                    const el = document.getElementById(id);
+                    if (el && data[key] !== undefined) el.value = data[key];
+                }
+                for (const id of checkboxes) {
+                    const el = document.getElementById(id);
+                    if (el && data[id] !== undefined) el.checked = data[id];
+                }
+                for (const [id, key] of Object.entries(editables)) {
+                    const el = document.getElementById(id);
+                    if (el && data[key]) el.textContent = data[key];
+                }
+            } catch(e) {}
+        }
+
+        // Auto-save on any change
+        document.addEventListener('input', saveSettings);
+        document.addEventListener('change', saveSettings);
+
+        // Load saved settings on page load
+        loadSettings();
+
+        // Init preview with loaded values
+        updateSizes();
+        updatePositions();
+        updateBarRatio();
+        updatePreview();
+
+        // Load YouTube preview if URL was saved
+        if (document.getElementById('url').value) loadPreview();
+
+        // ── Generation ──
+        function startGeneration() {
+            const url = document.getElementById('url').value.trim();
+            if (!url) { alert('YouTube URL을 입력해주세요'); return; }
+
+            const payload = {
+                url,
+                num_clips: parseInt(document.getElementById('num_clips').value),
+                min_duration: parseInt(document.getElementById('min_duration').value),
+                max_duration: parseInt(document.getElementById('max_duration').value),
+                subtitle_style: document.getElementById('subtitle_style').value,
+                ai_engine: document.getElementById('ai_engine').value,
+                language: document.getElementById('language').value,
+                add_hook: document.getElementById('add_hook').checked,
+                add_zoom_cuts: document.getElementById('add_zoom_cuts').checked,
+                add_emoji: document.getElementById('add_emoji').checked,
+                add_progress_bar: document.getElementById('add_progress_bar').checked,
+                add_music: document.getElementById('add_music').checked,
+                // Overlay text from editable fields
+                title_text: document.getElementById('edit-title').textContent.trim(),
+                scripture_text: document.getElementById('edit-scripture').textContent.trim(),
+                speaker_text: document.getElementById('edit-speaker').textContent.trim(),
+                // Sizes & positions
+                title_font_size: parseInt(document.getElementById('title_size').value),
+                sub_font_size: parseInt(document.getElementById('sub_size').value),
+                bar_ratio: parseInt(document.getElementById('bar_ratio').value),
+                title_y_pct: parseInt(document.getElementById('title_y').value),
+                sub_y_pct: parseInt(document.getElementById('sub_y').value),
+            };
+
+            document.getElementById('progress-section').style.display = 'block';
+            document.getElementById('clip-selector').style.display = 'none';
+            document.getElementById('error-section').style.display = 'none';
+            document.getElementById('generate-btn').disabled = true;
+            document.getElementById('generate-btn').textContent = 'Generating...';
+
+            fetch('/generate', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify(payload),
+            })
+            .then(r => r.json())
+            .then(data => {
+                if (data.error) { showError(data.error); return; }
+                currentJobId = data.job_id;
+                pollTimer = setInterval(pollStatus, 2000);
+            })
+            .catch(e => showError(e.message));
+        }
+
+        function pollStatus() {
+            if (!currentJobId) return;
+            fetch(`/status/${currentJobId}`)
+            .then(r => r.json())
+            .then(data => {
+                updateProgress(data);
+                if (data.stage === 'done') { clearInterval(pollTimer); loadResult(); }
+                else if (data.stage === 'error') { clearInterval(pollTimer); showError(data.error || 'Error'); }
+            }).catch(() => {});
+        }
+
+        function updateProgress(data) {
+            document.getElementById('progress-bar').style.width = data.progress + '%';
+            document.getElementById('progress-message').textContent = data.message || data.stage;
+            const stages = ['downloading','transcribing','selecting','processing','done'];
+            const idx = stages.indexOf(data.stage);
+            document.querySelectorAll('.stage-indicators span').forEach((el, i) => {
+                el.className = i < idx ? 'completed' : i === idx ? 'active' : '';
+            });
+        }
+
+        function loadResult() {
+            fetch(`/result/${currentJobId}`)
+            .then(r => r.json())
+            .then(data => {
+                clipData = data.clips;
+                document.getElementById('progress-section').style.display = 'none';
+                document.getElementById('generate-btn').disabled = false;
+                document.getElementById('generate-btn').textContent = 'Generate';
+                if (clipData.length === 0) { showError('No clips generated'); return; }
+
+                const selector = document.getElementById('clip-selector');
+                selector.style.display = 'block';
+                const btns = document.getElementById('clip-buttons');
+                btns.innerHTML = '';
+                clipData.forEach((clip, i) => {
+                    const btn = document.createElement('button');
+                    btn.className = 'clip-btn' + (i === 0 ? ' active' : '');
+                    btn.textContent = `Clip ${clip.index + 1}`;
+                    btn.onclick = () => selectClip(i);
+                    btns.appendChild(btn);
+                });
+                selectClip(0);
+            }).catch(e => showError(e.message));
+        }
+
+        function selectClip(idx) {
+            const clip = clipData[idx];
+            document.querySelectorAll('.clip-btn').forEach((b, i) => {
+                b.className = 'clip-btn' + (i === idx ? ' active' : '');
+            });
+            // Switch to video view
+            document.getElementById('preview-overlay').style.display = 'none';
+            document.getElementById('overlay-controls').style.display = 'none';
+            const video = document.getElementById('output-video');
+            video.src = clip.download_url;
+            video.style.display = 'block';
+            video.load();
+            const dl = document.getElementById('download-link');
+            dl.href = clip.download_url;
+            dl.textContent = `Download ${clip.filename}`;
+            dl.style.display = 'inline-block';
+        }
+
+        function showError(msg) {
+            document.getElementById('progress-section').style.display = 'none';
+            document.getElementById('error-section').style.display = 'block';
+            document.getElementById('error-message').textContent = msg;
+            document.getElementById('generate-btn').disabled = false;
+            document.getElementById('generate-btn').textContent = 'Generate';
+        }
+
+        // Back to editor from video view
+        document.getElementById('phone-frame').addEventListener('dblclick', () => {
+            document.getElementById('output-video').style.display = 'none';
+            document.getElementById('preview-overlay').style.display = 'flex';
+            document.getElementById('overlay-controls').style.display = 'block';
+        });
+    </script>
+</body>
+</html>
