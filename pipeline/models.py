@@ -40,6 +40,7 @@ class JobConfig(BaseModel):
     speaker_text: str = ""     # Line 3: speaker name
     title_font_size: int = 90  # Font size for title
     sub_font_size: int = 44    # Font size for scripture/speaker
+    title_font: str = "Noto Sans KR"  # Font for title bar text
     bar_ratio: int = 40        # Black bar height as % of total (20-60)
     title_y_pct: int = 25      # Title Y position within black bar (0-100%)
     sub_y_pct: int = 65        # Sub info Y position within black bar (0-100%)

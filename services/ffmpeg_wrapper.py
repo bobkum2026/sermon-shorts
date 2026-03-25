@@ -74,14 +74,24 @@ def cut_segment(
     copy_codec: bool = True,
 ) -> Path:
     """Cut a segment from a video file."""
-    args = [
-        "-ss", f"{start:.3f}",
-        "-to", f"{end:.3f}",
-        "-i", str(input_path),
-    ]
     if copy_codec:
-        args += ["-c", "copy", "-avoid_negative_ts", "make_zero"]
-    args.append(str(output_path))
+        args = [
+            "-ss", f"{start:.3f}",
+            "-to", f"{end:.3f}",
+            "-i", str(input_path),
+            "-c", "copy", "-avoid_negative_ts", "make_zero",
+            str(output_path),
+        ]
+    else:
+        # Re-encode for frame-accurate cutting (subtitle sync)
+        args = [
+            "-i", str(input_path),
+            "-ss", f"{start:.3f}",
+            "-to", f"{end:.3f}",
+            "-c:v", "libx264", "-preset", "fast", "-crf", "18",
+            "-c:a", "aac", "-b:a", "128k",
+            str(output_path),
+        ]
     run_ffmpeg(args)
     return output_path
 

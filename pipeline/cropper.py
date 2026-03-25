@@ -27,12 +27,14 @@ def crop_clip(
         "Clip %d: extracting %.1f-%.1f",
         selection.index, selection.start_time, selection.end_time,
     )
+    # Use re-encode (copy_codec=False) for frame-accurate cutting
+    # copy_codec=True cuts at keyframes, causing subtitle sync drift
     cut_segment(
         metadata.source_path,
         raw_path,
         selection.start_time,
         selection.end_time,
-        copy_codec=True,
+        copy_codec=False,
     )
 
     # Get actual segment dimensions

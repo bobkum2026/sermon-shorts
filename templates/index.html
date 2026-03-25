@@ -5,6 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Sermon Shorts Generator</title>
     <link rel="stylesheet" href="/static/style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Black+Han+Sans&family=Do+Hyeon&family=Gaegu:wght@700&family=Gothic+A1:wght@700&family=Jua&family=Noto+Sans+KR:wght@700&family=Noto+Serif+KR:wght@700&display=swap" rel="stylesheet">
 </head>
 <body>
     <header class="top-bar">
@@ -157,6 +159,16 @@
 
             <!-- Text size & position controls -->
             <div class="overlay-controls" id="overlay-controls">
+                <div class="control-section-label">폰트</div>
+                <select id="title_font" class="font-selector" onchange="updateFont()">
+                    <option value="Noto Sans KR" style="font-family:'Noto Sans KR'" selected>Noto Sans KR (고딕)</option>
+                    <option value="Noto Serif KR" style="font-family:'Noto Serif KR'">Noto Serif KR (명조)</option>
+                    <option value="Gothic A1" style="font-family:'Gothic A1'">Gothic A1</option>
+                    <option value="Do Hyeon" style="font-family:'Do Hyeon'">Do Hyeon (도현)</option>
+                    <option value="Jua" style="font-family:'Jua'">Jua (주아)</option>
+                    <option value="Black Han Sans" style="font-family:'Black Han Sans'">Black Han Sans (굵은)</option>
+                    <option value="Gaegu" style="font-family:'Gaegu'">Gaegu (손글씨)</option>
+                </select>
                 <div class="control-section-label">크기</div>
                 <div class="slider-group">
                     <label>제목</label>
@@ -292,6 +304,16 @@
             if (this.value.includes('youtube.com') || this.value.includes('youtu.be')) loadPreview();
         });
 
+        // ── Live Preview: font ──
+        function updateFont() {
+            const font = document.getElementById('title_font').value;
+            document.getElementById('edit-title').style.fontFamily = font;
+            document.querySelectorAll('.editable-sub').forEach(el => {
+                el.style.fontFamily = font;
+            });
+            saveSettings();
+        }
+
         // ── Live Preview: sizes ──
         function updateSizes() {
             const ts = document.getElementById('title_size').value;
@@ -348,6 +370,7 @@
             'title_y': 'title_y',
             'sub_y': 'sub_y',
             'bar_ratio': 'bar_ratio',
+            'title_font': 'title_font',
         };
         const checkboxes = ['add_hook','add_zoom_cuts','add_emoji','add_progress_bar','add_music'];
         const textareas = {'quotes': 'quotes'};
@@ -412,6 +435,7 @@
         loadSettings();
 
         // Init preview with loaded values
+        updateFont();
         updateSizes();
         updatePositions();
         updateBarRatio();
@@ -440,6 +464,7 @@
                 quotes: currentMode === 'quote'
                     ? document.getElementById('quotes').value.split('\n').filter(l => l.trim())
                     : [],
+                title_font: document.getElementById('title_font').value,
                 title_font_size: parseInt(document.getElementById('title_size').value),
                 sub_font_size: parseInt(document.getElementById('sub_size').value),
                 bar_ratio: parseInt(document.getElementById('bar_ratio').value),

@@ -91,6 +91,7 @@ def _build_config(data: dict, youtube_url: str = "") -> JobConfig:
         title_font_size=int(data.get("title_font_size", 90)),
         sub_font_size=int(data.get("sub_font_size", 44)),
         bar_ratio=int(data.get("bar_ratio", 40)),
+        title_font=data.get("title_font", "Noto Sans KR"),
         title_y_pct=int(data.get("title_y_pct", 25)),
         sub_y_pct=int(data.get("sub_y_pct", 65)),
         quotes=data.get("quotes", []),

@@ -188,7 +188,8 @@ def _apply_title_bar(
                         title_fs=config.title_font_size, sub_fs=config.sub_font_size,
                         bar_pct=bar_pct,
                         title_y_pct=config.title_y_pct / 100.0,
-                        sub_y_pct=config.sub_y_pct / 100.0)
+                        sub_y_pct=config.sub_y_pct / 100.0,
+                        font_name=config.title_font)
 
     # ffmpeg: overlay gradient PNG + burn title ASS
     escaped_ass = str(title_ass).replace("\\", "\\\\").replace(":", "\\:")
@@ -243,6 +244,7 @@ def _generate_title_ass(
     bar_pct: float = 0.40,
     title_y_pct: float = 0.25,
     sub_y_pct: float = 0.65,
+    font_name: str = "Noto Sans KR",
 ) -> None:
     """Generate ASS subtitle for title in the black bar area."""
     def _ts(s: float) -> str:
@@ -279,8 +281,8 @@ ScaledBorderAndShadow: yes
 
 [V4+ Styles]
 Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding
-Style: MainTitle,Noto Sans KR,{title_fs},&H00FFFFFF,&H000000FF,&H00000000,&H00000000,-1,0,0,0,100,100,2,0,1,0,0,5,60,60,0,1
-Style: SubInfo,Noto Sans KR,{sub_fs},&H00BBBBBB,&H000000FF,&H00000000,&H00000000,0,0,0,0,100,100,1,0,1,0,0,5,60,60,0,1
+Style: MainTitle,{font_name},{title_fs},&H00FFFFFF,&H000000FF,&H00000000,&H00000000,-1,0,0,0,100,100,2,0,1,0,0,5,60,60,0,1
+Style: SubInfo,{font_name},{sub_fs},&H00BBBBBB,&H000000FF,&H00000000,&H00000000,0,0,0,0,100,100,1,0,1,0,0,5,60,60,0,1
 
 [Events]
 Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
