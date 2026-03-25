@@ -13,7 +13,8 @@ class JobConfig(BaseModel):
     """Configuration for a single video generation job."""
 
     job_id: str = Field(default_factory=lambda: uuid.uuid4().hex[:12])
-    youtube_url: str
+    youtube_url: str = ""
+    local_file: Optional[Path] = None  # Skip download if provided
     output_dir: Path = Path("./output")
     temp_dir: Path = Path("./temp")
     cleanup_temp: bool = True

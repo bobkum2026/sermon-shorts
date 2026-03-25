@@ -55,11 +55,25 @@ def run(
     config.job_output_dir.mkdir(parents=True, exist_ok=True)
 
     try:
-        # === Stage 1: Download ===
-        _update(config.job_id, stage="downloading", progress=5, message="Downloading video...")
-        if on_progress:
-            on_progress("downloading", 5, "Downloading video...")
-        metadata = downloader.download(config)
+        # === Stage 1: Download (or use local file) ===
+        if config.local_file and config.local_file.exists():
+            from services.ffmpeg_wrapper import get_video_info
+            _update(config.job_id, stage="downloading", progress=15, message="Using local file...")
+            if on_progress:
+                on_progress("downloading", 15, "Using local file...")
+            info = get_video_info(config.local_file)
+            metadata = VideoMetadata(
+                title=config.local_file.stem,
+                duration_seconds=info["duration"],
+                width=info["width"],
+                height=info["height"],
+                source_path=config.local_file,
+            )
+        else:
+            _update(config.job_id, stage="downloading", progress=5, message="Downloading video...")
+            if on_progress:
+                on_progress("downloading", 5, "Downloading video...")
+            metadata = downloader.download(config)
 
         # === Stage 2: Transcribe ===
         _update(config.job_id, stage="transcribing", progress=20, message="Transcribing audio...")

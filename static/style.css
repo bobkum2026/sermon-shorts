@@ -164,6 +164,29 @@ input:focus, select:focus { border-color: var(--primary); }
     background: var(--border);
 }
 
+/* ── File Drop Zone ── */
+.file-drop {
+    width: 100%;
+    padding: 20px;
+    background: var(--surface-2);
+    border: 2px dashed var(--border);
+    border-radius: 8px;
+    text-align: center;
+    cursor: pointer;
+    color: var(--text-dim);
+    font-size: 0.85rem;
+    transition: all 0.2s;
+}
+.file-drop:hover, .file-drop.dragover {
+    border-color: var(--primary);
+    color: var(--primary);
+}
+.file-drop.has-file {
+    border-color: var(--success);
+    color: var(--success);
+    border-style: solid;
+}
+
 textarea {
     width: 100%;
     padding: 8px 10px;

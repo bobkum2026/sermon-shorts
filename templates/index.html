@@ -23,11 +23,25 @@
             </div>
 
             <div class="controls">
-                <div class="form-group">
-                    <label>YouTube URL</label>
+                <!-- Source Toggle -->
+                <div class="mode-toggle">
+                    <button class="mode-btn active" id="src-url" onclick="setSource('url')">YouTube URL</button>
+                    <button class="mode-btn" id="src-file" onclick="setSource('file')">파일 업로드</button>
+                </div>
+
+                <!-- URL input -->
+                <div id="url-section" class="form-group">
                     <div class="url-row">
                         <input type="url" id="url" placeholder="https://youtube.com/watch?v=...">
                         <button class="btn-small" onclick="loadPreview()">Preview</button>
+                    </div>
+                </div>
+
+                <!-- File upload -->
+                <div id="file-section" class="form-group" style="display:none;">
+                    <div class="file-drop" id="file-drop" onclick="document.getElementById('file-input').click()">
+                        <span id="file-label">mp4 파일을 드래그하거나 클릭</span>
+                        <input type="file" id="file-input" accept="video/*" style="display:none" onchange="onFileSelect(this)">
                     </div>
                 </div>
 
@@ -207,6 +221,46 @@
         let pollTimer = null;
         let clipData = [];
 
+        // ── Source Toggle (URL vs File) ──
+        let currentSource = 'url';
+        let selectedFile = null;
+
+        function setSource(src) {
+            currentSource = src;
+            document.getElementById('src-url').className = 'mode-btn' + (src === 'url' ? ' active' : '');
+            document.getElementById('src-file').className = 'mode-btn' + (src === 'file' ? ' active' : '');
+            document.getElementById('url-section').style.display = src === 'url' ? 'block' : 'none';
+            document.getElementById('file-section').style.display = src === 'file' ? 'block' : 'none';
+            saveSettings();
+        }
+
+        function onFileSelect(input) {
+            if (input.files.length > 0) {
+                selectedFile = input.files[0];
+                document.getElementById('file-label').textContent = selectedFile.name + ' (' + (selectedFile.size / 1024 / 1024).toFixed(0) + 'MB)';
+                document.getElementById('file-drop').classList.add('has-file');
+            }
+        }
+
+        // Drag & drop
+        document.addEventListener('DOMContentLoaded', () => {
+            const drop = document.getElementById('file-drop');
+            if (drop) {
+                drop.addEventListener('dragover', e => { e.preventDefault(); drop.classList.add('dragover'); });
+                drop.addEventListener('dragleave', () => drop.classList.remove('dragover'));
+                drop.addEventListener('drop', e => {
+                    e.preventDefault();
+                    drop.classList.remove('dragover');
+                    if (e.dataTransfer.files.length > 0) {
+                        selectedFile = e.dataTransfer.files[0];
+                        document.getElementById('file-input').files = e.dataTransfer.files;
+                        document.getElementById('file-label').textContent = selectedFile.name + ' (' + (selectedFile.size / 1024 / 1024).toFixed(0) + 'MB)';
+                        drop.classList.add('has-file');
+                    }
+                });
+            }
+        });
+
         // ── Mode Toggle ──
         let currentMode = 'ai';
         function setMode(mode) {
@@ -367,12 +421,8 @@
         if (document.getElementById('url').value) loadPreview();
 
         // ── Generation ──
-        function startGeneration() {
-            const url = document.getElementById('url').value.trim();
-            if (!url) { alert('YouTube URL을 입력해주세요'); return; }
-
-            const payload = {
-                url,
+        function getSettings() {
+            return {
                 num_clips: parseInt(document.getElementById('num_clips').value),
                 min_duration: parseInt(document.getElementById('min_duration').value),
                 max_duration: parseInt(document.getElementById('max_duration').value),
@@ -384,40 +434,62 @@
                 add_emoji: document.getElementById('add_emoji').checked,
                 add_progress_bar: document.getElementById('add_progress_bar').checked,
                 add_music: document.getElementById('add_music').checked,
-                // Overlay text from editable fields
                 title_text: document.getElementById('edit-title').textContent.trim(),
                 scripture_text: document.getElementById('edit-scripture').textContent.trim(),
                 speaker_text: document.getElementById('edit-speaker').textContent.trim(),
-                // Quote mode
                 quotes: currentMode === 'quote'
                     ? document.getElementById('quotes').value.split('\n').filter(l => l.trim())
                     : [],
-                // Sizes & positions
                 title_font_size: parseInt(document.getElementById('title_size').value),
                 sub_font_size: parseInt(document.getElementById('sub_size').value),
                 bar_ratio: parseInt(document.getElementById('bar_ratio').value),
                 title_y_pct: parseInt(document.getElementById('title_y').value),
                 sub_y_pct: parseInt(document.getElementById('sub_y').value),
             };
+        }
 
+        function startGeneration() {
+            // Validate input
+            if (currentSource === 'url') {
+                const url = document.getElementById('url').value.trim();
+                if (!url) { alert('YouTube URL을 입력해주세요'); return; }
+            } else {
+                if (!selectedFile) { alert('영상 파일을 선택해주세요'); return; }
+            }
+
+            // Show progress
             document.getElementById('progress-section').style.display = 'block';
             document.getElementById('clip-selector').style.display = 'none';
             document.getElementById('error-section').style.display = 'none';
             document.getElementById('generate-btn').disabled = true;
             document.getElementById('generate-btn').textContent = 'Generating...';
 
-            fetch('/generate', {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify(payload),
-            })
-            .then(r => r.json())
-            .then(data => {
-                if (data.error) { showError(data.error); return; }
-                currentJobId = data.job_id;
-                pollTimer = setInterval(pollStatus, 2000);
-            })
-            .catch(e => showError(e.message));
+            let fetchPromise;
+
+            if (currentSource === 'file' && selectedFile) {
+                // File upload via multipart form
+                const formData = new FormData();
+                formData.append('file', selectedFile);
+                formData.append('settings', JSON.stringify(getSettings()));
+                fetchPromise = fetch('/generate', { method: 'POST', body: formData });
+            } else {
+                // URL via JSON
+                const payload = { url: document.getElementById('url').value.trim(), ...getSettings() };
+                fetchPromise = fetch('/generate', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify(payload),
+                });
+            }
+
+            fetchPromise
+                .then(r => r.json())
+                .then(data => {
+                    if (data.error) { showError(data.error); return; }
+                    currentJobId = data.job_id;
+                    pollTimer = setInterval(pollStatus, 2000);
+                })
+                .catch(e => showError(e.message));
         }
 
         function pollStatus() {

@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import json
 import logging
 import threading
 from pathlib import Path
@@ -13,11 +14,16 @@ from pipeline.models import JobConfig, PipelineResult
 from pipeline.orchestrator import get_status, run
 
 app = Flask(__name__)
+app.config['MAX_CONTENT_LENGTH'] = 2 * 1024 * 1024 * 1024  # 2GB upload limit
+
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
     datefmt="%H:%M:%S",
 )
+
+UPLOAD_DIR = Path("./uploads")
+UPLOAD_DIR.mkdir(exist_ok=True)
 
 _results: dict[str, PipelineResult] = {}
 
@@ -29,18 +35,51 @@ def index():
 
 @app.route("/generate", methods=["POST"])
 def generate():
+    # Handle both JSON and multipart form data (file upload)
+    if request.content_type and "multipart" in request.content_type:
+        return _generate_from_upload()
+    else:
+        return _generate_from_json()
+
+
+def _generate_from_json():
     data = request.json or {}
     url = data.get("url", "").strip()
     if not url:
         return jsonify({"error": "URL is required"}), 400
 
-    config = JobConfig(
-        youtube_url=url,
+    config = _build_config(data, youtube_url=url)
+    _start_pipeline(config)
+    return jsonify({"job_id": config.job_id})
+
+
+def _generate_from_upload():
+    file = request.files.get("file")
+    if not file or not file.filename:
+        return jsonify({"error": "File is required"}), 400
+
+    # Parse other form fields
+    data = json.loads(request.form.get("settings", "{}"))
+
+    # Save uploaded file
+    config = _build_config(data)
+    config.job_temp_dir.mkdir(parents=True, exist_ok=True)
+    save_path = config.job_temp_dir / f"upload_{file.filename}"
+    file.save(str(save_path))
+    config.local_file = save_path
+
+    _start_pipeline(config)
+    return jsonify({"job_id": config.job_id})
+
+
+def _build_config(data: dict, youtube_url: str = "") -> JobConfig:
+    return JobConfig(
+        youtube_url=youtube_url,
         num_clips=int(data.get("num_clips", 5)),
         min_duration=int(data.get("min_duration", 30)),
         max_duration=int(data.get("max_duration", 90)),
         subtitle_style=data.get("subtitle_style", "capcut"),
-        ai_engine=data.get("ai_engine", "gemini"),
+        ai_engine=data.get("ai_engine", "openai"),
         add_music=data.get("add_music", False),
         add_hook=data.get("add_hook", True),
         add_zoom_cuts=data.get("add_zoom_cuts", True),
@@ -58,17 +97,17 @@ def generate():
         language=data.get("language", "auto"),
     )
 
-    def _run_pipeline():
+
+def _start_pipeline(config: JobConfig):
+    def _run():
         try:
             result = run(config)
             _results[config.job_id] = result
         except Exception as e:
             logging.error("Pipeline error: %s", e)
 
-    thread = threading.Thread(target=_run_pipeline, daemon=True)
+    thread = threading.Thread(target=_run, daemon=True)
     thread.start()
-
-    return jsonify({"job_id": config.job_id})
 
 
 @app.route("/status/<job_id>")
