@@ -50,6 +50,10 @@ class JobConfig(BaseModel):
     # AI engine for highlight analysis
     ai_engine: str = "openai"  # "openai" or "gemini"
 
+    # Quote mode: user provides specific sentences to find in the video
+    # Each line = one clip. Skips AI selection entirely.
+    quotes: list[str] = Field(default_factory=list)
+
     @property
     def job_temp_dir(self) -> Path:
         return self.temp_dir / self.job_id

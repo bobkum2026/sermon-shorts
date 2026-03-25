@@ -54,6 +54,7 @@ def generate():
         bar_ratio=int(data.get("bar_ratio", 40)),
         title_y_pct=int(data.get("title_y_pct", 25)),
         sub_y_pct=int(data.get("sub_y_pct", 65)),
+        quotes=data.get("quotes", []),
         language=data.get("language", "auto"),
     )
 

@@ -67,11 +67,20 @@ def run(
             on_progress("transcribing", 20, "Transcribing audio...")
         transcript = transcriber.transcribe(metadata, config)
 
-        # === Stage 3: Select best moments ===
-        _update(config.job_id, stage="selecting", progress=35, message="AI selecting best moments...")
-        if on_progress:
-            on_progress("selecting", 35, "AI selecting best moments...")
-        selections = selector.select_clips(transcript, config, video_duration=metadata.duration_seconds)
+        # === Stage 3: Select clips ===
+        if config.quotes:
+            # Quote mode: find user-provided sentences in transcript
+            from pipeline import quote_matcher
+            _update(config.job_id, stage="selecting", progress=35, message="Matching quotes...")
+            if on_progress:
+                on_progress("selecting", 35, "Matching quotes...")
+            selections = quote_matcher.match_quotes(transcript, config)
+        else:
+            # AI mode: auto-select best moments
+            _update(config.job_id, stage="selecting", progress=35, message="AI selecting best moments...")
+            if on_progress:
+                on_progress("selecting", 35, "AI selecting best moments...")
+            selections = selector.select_clips(transcript, config, video_duration=metadata.duration_seconds)
 
         # === Stage 4-6: Process each clip in parallel ===
         _update(

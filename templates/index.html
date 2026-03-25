@@ -31,6 +31,20 @@
                     </div>
                 </div>
 
+                <!-- Mode Toggle -->
+                <div class="mode-toggle">
+                    <button class="mode-btn active" id="mode-ai" onclick="setMode('ai')">AI 자동 선택</button>
+                    <button class="mode-btn" id="mode-quote" onclick="setMode('quote')">문장으로 찾기</button>
+                </div>
+
+                <!-- Quote Input (hidden by default) -->
+                <div id="quote-section" class="form-group" style="display:none;">
+                    <label>찾을 문장 (한 줄에 하나씩)</label>
+                    <textarea id="quotes" rows="4" placeholder="십자가 앞에 서면 우리의 모든 것이 변합니다&#10;성령님이 우리와 함께 계십니다&#10;이것이 복음입니다"></textarea>
+                </div>
+
+                <!-- AI mode settings -->
+                <div id="ai-section">
                 <div class="form-row-3">
                     <div class="form-group">
                         <label>Clips</label>
@@ -71,6 +85,7 @@
                         </select>
                     </div>
                 </div>
+                </div><!-- /ai-section -->
 
                 <div class="toggles">
                     <label class="toggle"><input type="checkbox" id="add_hook" checked><span>Hook</span></label>
@@ -192,6 +207,17 @@
         let pollTimer = null;
         let clipData = [];
 
+        // ── Mode Toggle ──
+        let currentMode = 'ai';
+        function setMode(mode) {
+            currentMode = mode;
+            document.getElementById('mode-ai').className = 'mode-btn' + (mode === 'ai' ? ' active' : '');
+            document.getElementById('mode-quote').className = 'mode-btn' + (mode === 'quote' ? ' active' : '');
+            document.getElementById('ai-section').style.display = mode === 'ai' ? 'block' : 'none';
+            document.getElementById('quote-section').style.display = mode === 'quote' ? 'block' : 'none';
+            saveSettings();
+        }
+
         // ── YouTube Preview ──
         function loadPreview() {
             const url = document.getElementById('url').value.trim();
@@ -270,6 +296,7 @@
             'bar_ratio': 'bar_ratio',
         };
         const checkboxes = ['add_hook','add_zoom_cuts','add_emoji','add_progress_bar','add_music'];
+        const textareas = {'quotes': 'quotes'};
         const editables = {
             'edit-title': 'title_text',
             'edit-scripture': 'scripture_text',
@@ -290,6 +317,11 @@
                 const el = document.getElementById(id);
                 if (el) data[key] = el.textContent;
             }
+            for (const [id, key] of Object.entries(textareas)) {
+                const el = document.getElementById(id);
+                if (el) data[key] = el.value;
+            }
+            data['mode'] = currentMode;
             localStorage.setItem(SAVE_KEY, JSON.stringify(data));
         }
 
@@ -310,6 +342,11 @@
                     const el = document.getElementById(id);
                     if (el && data[key]) el.textContent = data[key];
                 }
+                for (const [id, key] of Object.entries(textareas)) {
+                    const el = document.getElementById(id);
+                    if (el && data[key]) el.value = data[key];
+                }
+                if (data['mode']) setMode(data['mode']);
             } catch(e) {}
         }
 
@@ -351,6 +388,10 @@
                 title_text: document.getElementById('edit-title').textContent.trim(),
                 scripture_text: document.getElementById('edit-scripture').textContent.trim(),
                 speaker_text: document.getElementById('edit-speaker').textContent.trim(),
+                // Quote mode
+                quotes: currentMode === 'quote'
+                    ? document.getElementById('quotes').value.split('\n').filter(l => l.trim())
+                    : [],
                 // Sizes & positions
                 title_font_size: parseInt(document.getElementById('title_size').value),
                 sub_font_size: parseInt(document.getElementById('sub_size').value),

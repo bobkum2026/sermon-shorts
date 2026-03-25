@@ -137,6 +137,48 @@ input:focus, select:focus { border-color: var(--primary); }
 }
 .btn-small:hover { border-color: var(--primary); color: var(--primary); }
 
+/* ── Mode Toggle ── */
+.mode-toggle {
+    display: flex;
+    gap: 0;
+    margin-bottom: 10px;
+    border-radius: 6px;
+    overflow: hidden;
+    border: 1px solid var(--border);
+}
+.mode-btn {
+    flex: 1;
+    padding: 8px;
+    background: var(--surface-2);
+    color: var(--text-dim);
+    border: none;
+    font-size: 0.8rem;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+.mode-btn.active {
+    background: var(--primary);
+    color: white;
+}
+.mode-btn:hover:not(.active) {
+    background: var(--border);
+}
+
+textarea {
+    width: 100%;
+    padding: 8px 10px;
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    color: var(--text);
+    font-size: 0.85rem;
+    outline: none;
+    resize: vertical;
+    font-family: inherit;
+    line-height: 1.5;
+}
+textarea:focus { border-color: var(--primary); }
+
 .form-row-3 {
     display: grid;
     grid-template-columns: 1fr 1fr 1fr;
